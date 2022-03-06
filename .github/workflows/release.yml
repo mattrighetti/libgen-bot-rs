@@ -22,8 +22,8 @@ jobs:
           command: build
           args: --target arm-unknown-linux-gnueabihf --release
       - name: Test
-        run: file target/arm-unknown-linux-gnueabihf/release/libgen-bot
+        run: file target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: target/arm-unknown-linux-gnueabihf/release/libgen-bot
+          files: target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs
