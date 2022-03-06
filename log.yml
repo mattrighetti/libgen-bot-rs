@@ -1,0 +1,20 @@
+appenders:
+  # An appender named "stdout" that writes to stdout
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{l} > {m}{n}"
+
+  # An appender named "requests" that writes to a file with a custom pattern encoder
+  requests:
+    kind: file
+    path: "debug.log"
+    encoder:
+      pattern: "[{d(%Y-%m-%d %H:%M:%S %Z)}] [{l}] {m}{n}"
+
+# Set the default logging level to "info" and attach both "stdout" and "requests" appender to the root
+root:
+  level: info
+  appenders:
+    - stdout
+    - requests

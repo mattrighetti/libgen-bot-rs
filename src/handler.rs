@@ -27,10 +27,11 @@ pub async fn callback_handler(
     bot: AutoSend<Bot>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
     if let Some(md5) = q.data {
-        let text = format!("⬇️: http://gen.lib.rus.ec/book/index.php?md5={}", md5);
+        let text = format!("⬇️ http://gen.lib.rus.ec/book/index.php?md5={}", md5);
 
         match q.message {
             Some(Message { id, chat, .. }) => {
+                log::info!("{} selected: {}", chat.id, md5);
                 bot.edit_message_text(chat.id, id, text).await?;
             }
             None => {
@@ -39,8 +40,6 @@ pub async fn callback_handler(
                 }
             }
         }
-
-        log::info!("user selected: {}", md5);
     }
 
     Ok(())
@@ -59,6 +58,8 @@ pub async fn message_handler(
             return Ok(()); 
         }
     };
+
+    log::info!("{} contacted bot: {}", chat_id, text);
 
     let mut books: Option<Vec<Book>> = None;
     if let Ok(command) = Command::parse(text, "gactivitybot") {

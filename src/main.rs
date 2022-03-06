@@ -8,11 +8,12 @@ use handler::{message_handler, callback_handler};
 
 #[tokio::main]
 async fn main() {
+    let log_path = std::env::var("LOG_PATH").unwrap();
+    log4rs::init_file(log_path, Default::default()).unwrap();
     run().await;
 }
 
 async fn run() {
-    teloxide::enable_logging!();
     log::info!("Starting libgen-bot");
 
     let bot = Bot::from_env().auto_send();
