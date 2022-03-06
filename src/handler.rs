@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc};
+use std::{error::Error, sync::Arc, ops::Index};
 use libgen::{Book, Utils, Search};
 use teloxide::{
     prelude2::*,
@@ -26,8 +26,8 @@ pub async fn callback_handler(
     q: CallbackQuery,
     bot: AutoSend<Bot>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    if let Some(version) = q.data {
-        let text = format!("You chose: {}", version);
+    if let Some(md5) = q.data {
+        let text = format!("⬇️: http://gen.lib.rus.ec/book/index.php?md5={}", md5);
 
         match q.message {
             Some(Message { id, chat, .. }) => {
@@ -40,7 +40,7 @@ pub async fn callback_handler(
             }
         }
 
-        log::info!("You chose: {}", version);
+        log::info!("user selected: {}", md5);
     }
 
     Ok(())
@@ -62,19 +62,23 @@ pub async fn message_handler(
 
     let mut books: Option<Vec<Book>> = None;
     if let Ok(command) = Command::parse(text, "gactivitybot") {
-        match command {
-            Command::Start => {
-                bot.send_message(m.chat.id, "Tell me what to look for! :)").await?;
-            }
+        let q = match command {
             Command::Author(author) => {
-                books = Some(get_books(&utils.client, Search::Author(author), 5).await);
+                Some(Search::Author(author))
             }
             Command::Title(title) => {
-                books = Some(get_books(&utils.client, Search::Title(title), 5).await);
+                Some(Search::Title(title))
             }
             Command::ISBN(isbn) => {
-                books = Some(get_books(&utils.client, Search::ISBN(isbn), 5).await);
+                Some(Search::ISBN(isbn))
             }
+            _ => { None }
+        };
+
+        if q.is_some() {
+            books = Some(get_books(&utils.client, q.unwrap(), 5).await);
+        } else {
+            bot.send_message(m.chat.id, "Tell me what to look for! :)").await?;
         }
     } else {
         match m.kind {
@@ -87,8 +91,8 @@ pub async fn message_handler(
 
     if let Some(books) = books {
         if books.len() > 0 {
-            let keyboard = make_keyboard(books);
-            bot.send_message(chat_id, "This is what I've found").reply_markup(keyboard).await?;
+            let keyboard = make_keyboard(&books);
+            bot.send_message(chat_id, make_message(&books).as_str()).reply_markup(keyboard).await?;
         } else {
             bot.send_message(chat_id, "Sorry, I don't have any result for that...").await?;
         }
@@ -97,11 +101,31 @@ pub async fn message_handler(
     Ok(())
 }
 
-fn make_keyboard(books: Vec<Book>) -> InlineKeyboardMarkup {
-    let mut keyboard: Vec<Vec<InlineKeyboardButton>> = vec![];
+fn make_message(books: &Vec<Book>) -> String {
+    let msg: String = books
+        .iter()
+        .enumerate()
+        .map(|(i, b)| b.pretty_with_index(i) + "\n")
+        .collect();
+        
+    msg
+}
 
-    for book in books {
-        keyboard.push(vec![InlineKeyboardButton::callback(book.title.to_owned(), book.md5.to_owned())]);
+fn make_keyboard(books: &Vec<Book>) -> InlineKeyboardMarkup {
+    let mut keyboard: Vec<Vec<InlineKeyboardButton>> = vec![];
+    let b_len: u8 = books.len() as u8;
+    let range: Vec<_> = (1..b_len+1).collect();
+
+    for indexes in range.chunks(5) {
+        let mut row = Vec::new();
+        for i in indexes {
+            row.push(InlineKeyboardButton::callback(
+                format!("{}", i),
+                books.index((i.to_owned() - 1) as usize).md5.to_owned())
+            )
+        }
+
+        keyboard.push(row);
     }
 
     InlineKeyboardMarkup::new(keyboard)

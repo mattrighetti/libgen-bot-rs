@@ -73,16 +73,24 @@ pub struct Book {
 }
 
 impl Book {
-    // fn pretty(&self) -> String {
-    //     format!(
-    //         "Title: {}\n\
-    //         👤: {}\n\
-    //         ⬇️: http://gen.lib.rus.ec/book/index.php?md5={}",
-    //         self.title,
-    //         self.author,
-    //         self.md5
-    //     )
-    // }
+    pub fn pretty(&self) -> String {
+        format!(
+            "{}\n\
+            👤 {}\n",
+            self.title,
+            self.author
+        )
+    }
+
+    pub fn pretty_with_index(&self, index: usize) -> String {
+        format!(
+            "{}. {}\n\
+            👤 {}\n",
+            index,
+            self.title,
+            self.author
+        )
+    }
 }
 
 impl std::fmt::Display for Book {
@@ -102,7 +110,7 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Vec<u32> {
         let id = node.descendants().take(1).next().unwrap().text();
         
         match id.parse::<u32>() {
-            Ok(id) => {ids.push(id)}
+            Ok(id) => { ids.push(id) }
             Err(_) => {}
         }
     }
@@ -111,7 +119,12 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Vec<u32> {
 }
 
 pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Vec<Book> {
-    let ids = ids.iter().map(|z| z.to_string()).collect::<Vec<String>>().join(",");
+    assert!(ids.len() > 0);
+    let ids = ids.iter()
+        .map(|z| z.to_string())
+        .collect::<Vec<String>>()
+        .join(",");
+
     let params: Vec<(String, String)> = vec![
         ("fields".into(), "title,author,year,md5".into()),
         ("ids".into(), ids)
@@ -123,23 +136,44 @@ pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Vec<Book> {
 
 pub async fn get_books(client: &Client, query: Search, limit: usize) -> Vec<Book> {
     let ids = search(client, query, limit).await;
-    get_ids(client, ids).await
+    if ids.len() > 0 {
+        return get_ids(client, ids).await
+    }
+
+    vec![]
 }
 
 #[cfg(test)]
 mod test {
     use crate::Search;
-    use crate::{search, get_ids};
+    use crate::{search, get_ids, get_books};
+
+    #[tokio::test]
+    async fn test_search_invalid_def() {
+        let client = reqwest::Client::new();
+        let query = Search::Default("Ahaha".into());
+
+        let ids = search(&client, query, 5).await;
+
+        assert_eq!(ids.len(), 0);
+    }
 
     #[tokio::test]
     async fn test_search_title() {
         let client = reqwest::Client::new();
         let query = Search::Title("Rust Programming".into());
 
-        let ids = search(&client, query, 5).await;
+        let ids = search(&client, query, 25).await;
         let expected: Vec<u32> = vec![1486260, 1527378, 1729710, 2158512, 2167798];
 
-        assert_eq!(ids, expected);
+        assert_eq!(ids.len(), 25);
+
+        let mut trunc_ids = ids.iter().take(5);
+        assert_eq!(trunc_ids.next(), Some(&expected[0]));
+        assert_eq!(trunc_ids.next(), Some(&expected[1]));
+        assert_eq!(trunc_ids.next(), Some(&expected[2]));
+        assert_eq!(trunc_ids.next(), Some(&expected[3]));
+        assert_eq!(trunc_ids.next(), Some(&expected[4]));
     }
 
     #[tokio::test]
@@ -192,5 +226,23 @@ mod test {
         let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775]).await;
         
         assert_eq!(result.len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_get_ids_max() {
+        let client = reqwest::Client::new();
+        let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775, 349771, 349771, 349771]).await;
+        
+        assert_eq!(result.len(), 5);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_get_books_def() {
+        let client = reqwest::Client::new();
+        let query = Search::Default("Ahaha".into());
+
+        let books = get_books(&client, query, 5).await;
+
+        assert_eq!(books.len(), 0);
     }
 }
