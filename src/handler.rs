@@ -8,7 +8,7 @@ use teloxide::{
         Message,
         MessageKind, InlineKeyboardButton, InlineKeyboardMarkup
     },
-    utils::command::BotCommand, payloads::SendMessageSetters
+    utils::command::BotCommand 
 };
 
 use libgen::get_books;
@@ -61,6 +61,8 @@ pub async fn message_handler(
 
     log::info!("{} contacted bot: {}", chat_id, text);
 
+    let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
+
     let mut books: Option<Vec<Book>> = None;
     if let Ok(command) = Command::parse(text, "gactivitybot") {
         let q = match command {
@@ -93,9 +95,10 @@ pub async fn message_handler(
     if let Some(books) = books {
         if books.len() > 0 {
             let keyboard = make_keyboard(&books);
-            bot.send_message(chat_id, make_message(&books).as_str()).reply_markup(keyboard).await?;
+            let text = make_message(&books);
+            bot.edit_message_text(chat_id, msg.id, text).reply_markup(keyboard).await?;
         } else {
-            bot.send_message(chat_id, "Sorry, I don't have any result for that...").await?;
+            bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
         }
     }
 
@@ -106,7 +109,7 @@ fn make_message(books: &Vec<Book>) -> String {
     let msg: String = books
         .iter()
         .enumerate()
-        .map(|(i, b)| b.pretty_with_index(i) + "\n")
+        .map(|(i, b)| b.pretty_with_index(i+1) + "\n")
         .collect();
         
     msg

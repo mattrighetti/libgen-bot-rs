@@ -69,7 +69,8 @@ pub struct Book {
     pub title: String,
     pub author: String,
     pub year: String,
-    pub md5: String
+    pub extension: String,
+    pub md5: String,
 }
 
 impl Book {
@@ -85,10 +86,13 @@ impl Book {
     pub fn pretty_with_index(&self, index: usize) -> String {
         format!(
             "{}. {}\n\
-            👤 {}\n",
+            👤 {}\n\
+            Year: {}, Type: {}\n",
             index,
             self.title,
-            self.author
+            self.author,
+            self.year,
+            self.extension
         )
     }
 }
@@ -126,11 +130,17 @@ pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Vec<Book> {
         .join(",");
 
     let params: Vec<(String, String)> = vec![
-        ("fields".into(), "title,author,year,md5".into()),
+        ("fields".into(), "title,author,year,extension,md5".into()),
         ("ids".into(), ids)
     ];
 
-    let res = client.get(LIBGEN_API_URL).query(&params).send().await.unwrap();
+    let res = client
+        .get(LIBGEN_API_URL)
+        .query(&params)
+        .send()
+        .await
+        .unwrap();
+    
     res.json::<Vec<Book>>().await.unwrap()
 }
 
