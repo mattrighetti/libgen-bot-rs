@@ -1,6 +1,9 @@
 name: Raspberry Pi bin compile
 
-on: push
+on:
+  push:
+    tags:
+      - '*.*'
 
 env:
   CARGO_TERM_COLOR: always
