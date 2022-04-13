@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc, ops::Index};
+use std::{error::Error, sync::Arc};
 use libgen::{Book, Utils, Search};
 use teloxide::{
     prelude2::*,
@@ -26,17 +26,15 @@ pub async fn callback_handler(
     q: CallbackQuery,
     bot: AutoSend<Bot>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    if let Some(md5) = q.data {
-        let text = format!("⬇️ http://gen.lib.rus.ec/book/index.php?md5={}", md5);
-
+    if let Some(download_data) = q.data {
         match q.message {
             Some(Message { id, chat, .. }) => {
-                log::info!("{} selected: {}", chat.id, md5);
-                bot.edit_message_text(chat.id, id, text).await?;
+                log::info!("{} requested link", chat.id);
+                bot.edit_message_text(chat.id, id, download_data).await?;
             }
             None => {
                 if let Some(id) = q.inline_message_id {
-                    bot.edit_message_text_inline(id, text).await?;
+                    bot.edit_message_text_inline(id, download_data).await?;
                 }
             }
         }
@@ -125,8 +123,8 @@ fn make_keyboard(books: &Vec<Book>) -> InlineKeyboardMarkup {
         for i in indexes {
             row.push(InlineKeyboardButton::callback(
                 format!("{}", i),
-                books.index((i.to_owned() - 1) as usize).md5.to_owned())
-            )
+                books[(i - 1) as usize].download_data()
+            ))
         }
 
         keyboard.push(row);

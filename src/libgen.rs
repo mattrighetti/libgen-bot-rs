@@ -95,6 +95,15 @@ impl Book {
             self.extension
         )
     }
+
+    pub fn download_data(&self) -> String {
+        format!(
+            "{}\n\n\
+            ⬇️ http://gen.lib.rus.ec/book/index.php?md5={}\n",
+            self.title,
+            self.md5
+        )
+    }
 }
 
 impl std::fmt::Display for Book {
