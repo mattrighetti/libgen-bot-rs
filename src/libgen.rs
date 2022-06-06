@@ -3,8 +3,7 @@ extern crate select;
 extern crate serde;
 
 use core::fmt;
-
-use serde::{Deserialize};
+use serde::Deserialize;
 use reqwest::Client;
 use select::document::Document;
 use select::predicate::Attr;
@@ -13,12 +12,14 @@ const LIBGEN_URL: &str = "https://libgen.is/search.php";
 const LIBGEN_API_URL: &str = "https://libgen.is/json.php";
 
 pub struct Utils {
-    pub client: Client,
+    pub client: Client
 }
 
 impl Utils {
     pub fn new() -> Self {
-        Utils { client: Client::new() }
+        Utils {
+            client: Client::new()
+        }
     }
 }
 
@@ -66,6 +67,7 @@ impl Search {
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct Book {
+    pub id: String,
     pub title: String,
     pub author: String,
     pub year: String,
@@ -130,7 +132,7 @@ pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Vec<Book> {
         .join(",");
 
     let params: Vec<(String, String)> = vec![
-        ("fields".into(), "title,author,year,extension,md5".into()),
+        ("fields".into(), "id,title,author,year,extension,md5".into()),
         ("ids".into(), ids)
     ];
 
