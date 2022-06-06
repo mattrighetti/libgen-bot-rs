@@ -1,12 +1,10 @@
-extern crate reqwest;
-extern crate select;
-extern crate serde;
+pub mod types;
 
-use core::fmt;
-use serde::Deserialize;
 use reqwest::Client;
 use select::document::Document;
 use select::predicate::Attr;
+
+use types::*;
 
 const LIBGEN_URL: &str = "https://libgen.is/search.php";
 const LIBGEN_API_URL: &str = "https://libgen.is/json.php";
@@ -20,88 +18,6 @@ impl Utils {
         Utils {
             client: Client::new()
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Search {
-    ISBN(String),
-    Author(String),
-    Title(String),
-    Default(String)
-}
-
-impl Search {
-    pub fn from(query: &str) -> Self {
-        if query.starts_with("!isbn") {
-            return Search::ISBN(query.to_string());
-        } else if query.starts_with("!author") {
-            return Search::Author(query.to_string());
-        } else {
-            return Search::Title(query.to_string());
-        }
-    }
-
-    pub fn search_params(self) -> Vec<(String, String)> {
-        let mut q = match self {
-            Search::Author(author) => {
-                vec![("req".to_string(), author), ("column".to_string(), "author".to_string())]
-            }
-            Search::ISBN(isbn) => {
-                vec![("req".to_string(), isbn), ("column".to_string(), "identifier".to_string())]
-            }
-            Search::Title(title) => {
-                vec![("req".to_string(), title), ("column".to_string(), "title".to_string())]
-            }
-            Search::Default(text) => {
-                vec![("req".to_string(), text), ("column".to_string(), "def".to_string())]
-            }
-        };
-        q.push(("view".into(), "simple".into()));
-        q.push(("res".into(), "25".into()));
-        q.push(("open".into(), "0".into()));
-
-        q
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-pub struct Book {
-    pub id: String,
-    pub title: String,
-    pub author: String,
-    pub year: String,
-    pub extension: String,
-    pub md5: String,
-}
-
-impl Book {
-    pub fn pretty(&self) -> String {
-        format!(
-            "{}\n\
-            👤 {}\n",
-            self.title,
-            self.author
-        )
-    }
-
-    pub fn pretty_with_index(&self, index: usize) -> String {
-        format!(
-            "{}. {}\n\
-            👤 {}\n\
-            Year: {}, Type: {}\n",
-            index,
-            self.title,
-            self.author,
-            self.year,
-            self.extension
-        )
-    }
-}
-
-impl std::fmt::Display for Book {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Book({}, {}, {})", self.title, self.author, self.md5)
     }
 }
 
@@ -157,8 +73,7 @@ pub async fn get_books(client: &Client, query: Search, limit: usize) -> Vec<Book
 
 #[cfg(test)]
 mod test {
-    use crate::Search;
-    use crate::{search, get_ids, get_books};
+    use super::*;
 
     #[tokio::test]
     async fn test_search_invalid_def() {

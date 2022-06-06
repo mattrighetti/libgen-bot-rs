@@ -1,26 +1,23 @@
 use std::{
     error::Error,
-    sync::Arc,
-    ops::Index
+    sync::Arc
 };
-use reqwest::Url;
-use libgen::{
-    Book,
+use crate::libgen::{
+    types::*,
     Utils,
-    Search, get_ids
+    get_ids,
+    get_books
 };
+use crate::utils::*;
 use teloxide::{
     prelude2::*,
     Bot,
     adaptors::AutoSend,
     types::{
         Message,
-        InlineKeyboardButton,
-        InlineKeyboardMarkup
     },
     utils::command::BotCommand 
 };
-use libgen::get_books;
 
 #[derive(BotCommand)]
 #[command(rename = "lowercase", description = "These commands are supported:")]
@@ -44,7 +41,9 @@ pub async fn callback_handler(
     q: CallbackQuery,
     bot: AutoSend<Bot>,
     utils: Arc<Utils>
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) 
+    -> Result<(), Box<dyn Error + Send + Sync>> 
+{
     if let Some(id) = q.data {
         let book = get_ids(&utils.client, vec![id.parse().unwrap()]).await;
         let book = book.first().unwrap();
@@ -72,8 +71,10 @@ pub async fn callback_handler(
 pub async fn message_handler(
     bot: AutoSend<Bot>,
     m: Message,
-    utils: Arc<Utils>,
-) ->Result<(), Box<dyn Error + Send + Sync>> {
+    utils: Arc<Utils>
+)
+    -> Result<(), Box<dyn Error + Send + Sync>> 
+{
     let chat_id = m.chat_id();
 
     let text = match m.text() {
@@ -84,18 +85,14 @@ pub async fn message_handler(
     };
 
     log::info!("{} contacted bot: {}", chat_id, text);
-
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
-
     let command =  Command::parse(text, "libgenis_bot");
-    
     let mut q = Search::Default(text.into());
     if let Ok(command) = command {
         q = command.into();
     }
 
     let books = get_books(&utils.client, q, 5).await;
-
     if books.len() > 0 {
         let keyboard = make_keyboard(&books);
         let text = make_message(&books);
@@ -105,42 +102,4 @@ pub async fn message_handler(
     }
 
     Ok(())
-}
-
-fn make_message(books: &Vec<Book>) -> String {
-    let msg: String = books
-        .iter()
-        .enumerate()
-        .map(|(i, b)| b.pretty_with_index(i+1) + "\n")
-        .collect();
-        
-    msg
-}
-
-fn make_url_keyboard(url: &str) -> InlineKeyboardMarkup {
-    let url = Url::parse(url).unwrap();
-    let button = InlineKeyboardButton::url("Download".to_string(), url);
-
-    let keyboard = vec![vec![button]];    
-    InlineKeyboardMarkup::new(keyboard)
-}
-
-fn make_keyboard(books: &Vec<Book>) -> InlineKeyboardMarkup {
-    let mut keyboard: Vec<Vec<InlineKeyboardButton>> = vec![];
-    let b_len: u8 = books.len() as u8;
-    let range: Vec<_> = (1..b_len+1).collect();
-
-    for indexes in range.chunks(5) {
-        let mut row = Vec::new();
-        for i in indexes {
-            row.push(InlineKeyboardButton::callback(
-                format!("{}", i),
-                books.index((i.to_owned() - 1) as usize).id.to_owned())
-            )
-        }
-
-        keyboard.push(row);
-    }
-
-    InlineKeyboardMarkup::new(keyboard)
 }

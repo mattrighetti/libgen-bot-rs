@@ -5,10 +5,6 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-name = "libgen"
-path = "src/libgen.rs"
-
 [dependencies]
 teloxide = { version = "0.7", features = ["macros", "auto-send"] }
 log4rs = { version = "1.0", features = ["file_appender", "pattern_encoder"] }
