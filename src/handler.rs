@@ -9,6 +9,8 @@ use crate::libgen::{
     get_books
 };
 use crate::utils::*;
+use teloxide::payloads::EditMessageTextSetters;
+use teloxide::types::ParseMode;
 use teloxide::{
     prelude2::*,
     Bot,
@@ -45,17 +47,18 @@ pub async fn callback_handler(
     -> Result<(), Box<dyn Error + Send + Sync>> 
 {
     if let Some(id) = q.data {
-        let book = get_ids(&utils.client, vec![id.parse().unwrap()]).await;
-        let book = book.first().unwrap();
-
-        let url = format!("http://gen.lib.rus.ec/book/index.php?md5={}", book.md5);
-        let url_keyboard = make_url_keyboard(&url);
+        let ids = vec![id.parse().unwrap()];
+        let books = get_ids(&utils.client, ids).await;
+        let book = books.first().unwrap();
+        let url_keyboard = make_url_keyboard(&book.md5_url());
         
         match q.message {
             Some(Message { id, chat, .. }) => {
                 log::info!("{} selected: {}", chat.id, book.md5);
                 bot.edit_message_text(chat.id, id, book.pretty())
-                    .reply_markup(url_keyboard).await?;
+                    .parse_mode(ParseMode::Html)
+                    .reply_markup(url_keyboard)
+                    .await?;
             }
             None => {
                 if let Some(id) = q.inline_message_id {
@@ -96,7 +99,10 @@ pub async fn message_handler(
     if books.len() > 0 {
         let keyboard = make_keyboard(&books);
         let text = make_message(&books);
-        bot.edit_message_text(chat_id, msg.id, text).reply_markup(keyboard).await?;
+        bot.edit_message_text(chat_id, msg.id, text)
+            .parse_mode(ParseMode::Html)
+            .reply_markup(keyboard)
+            .await?;
     } else {
         bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
     }

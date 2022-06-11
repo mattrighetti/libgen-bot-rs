@@ -14,16 +14,18 @@ pub struct Book {
 impl Book {
     pub fn pretty(&self) -> String {
         format!(
-            "{}\n\
-            👤 {}\n",
+            "<b>{}</b>\n\n\
+            👤 {}\n\
+            Format: {}\n",
             self.title,
-            self.author
+            self.author,
+            self.extension
         )
     }
 
     pub fn pretty_with_index(&self, index: usize) -> String {
         format!(
-            "{}. {}\n\
+            "{}. <b>{}</b>\n\
             👤 {}\n\
             Year: {}, Type: {}\n",
             index,
@@ -32,6 +34,10 @@ impl Book {
             self.year,
             self.extension
         )
+    }
+
+    pub fn md5_url(&self) -> String {
+        format!("http://gen.lib.rus.ec/book/index.php?md5={}", self.md5)
     }
 }
 
