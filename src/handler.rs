@@ -54,7 +54,7 @@ pub async fn callback_handler(
         
         match q.message {
             Some(Message { id, chat, .. }) => {
-                log::info!("{} selected: {}", chat.id, book.md5);
+                utils.register(chat.id, id, "SELECTION")?;
                 bot.edit_message_text(chat.id, id, book.pretty())
                     .parse_mode(ParseMode::Html)
                     .reply_markup(url_keyboard)
@@ -87,8 +87,9 @@ pub async fn message_handler(
         }
     };
 
-    log::info!("{} contacted bot: {}", chat_id, text);
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
+    utils.register(chat_id, msg.id, "INVOKE")?;
+
     let command =  Command::parse(text, "libgenis_bot");
     let mut q = Search::Default(text.into());
     if let Ok(command) = command {
@@ -104,6 +105,7 @@ pub async fn message_handler(
             .reply_markup(keyboard)
             .await?;
     } else {
+        utils.register(chat_id, msg.id, "UNAVAILABLE")?;
         bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
     }
 

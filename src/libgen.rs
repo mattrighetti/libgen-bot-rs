@@ -1,8 +1,13 @@
 pub mod types;
 
+use std::sync::Mutex;
+
 use reqwest::Client;
+use rusqlite::{Connection, params, Result};
 use select::document::Document;
 use select::predicate::Attr;
+
+use crate::db::get_db;
 
 use types::*;
 
@@ -10,14 +15,25 @@ const LIBGEN_URL: &str = "https://libgen.is/search.php";
 const LIBGEN_API_URL: &str = "https://libgen.is/json.php";
 
 pub struct Utils {
-    pub client: Client
+    pub client: Client,
+    pub db: Mutex<Connection>,
 }
 
 impl Utils {
-    pub fn new() -> Self {
+    pub fn new(db_path: String) -> Self {
+        let conn = get_db(Some(db_path.as_str())).unwrap();
+
         Utils {
-            client: Client::new()
+            client: Client::new(),
+            db: Mutex::new(conn),
         }
+    }
+
+    pub fn register(&self, chat_id: i64, message_id: i32, atype: &str) -> Result<()> {
+        let lock = self.db.lock().unwrap();
+        lock.execute("INSERT INTO analytics (user_id, msg_id, type) VALUES (?,?,?)", params![chat_id, message_id, atype])?;
+
+        Ok(())
     }
 }
 

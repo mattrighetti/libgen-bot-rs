@@ -1,8 +1,9 @@
 mod libgen;
 mod handler;
 mod utils;
+mod db;
 
-use std::sync::Arc;
+use std::{sync::Arc, env};
 use libgen::Utils;
 use teloxide::{prelude2::*, dispatching2::UpdateFilterExt};
 use handler::{message_handler, callback_handler};
@@ -18,7 +19,8 @@ async fn run() {
     log::info!("Starting libgen-bot");
 
     let bot = Bot::from_env().auto_send();
-    let utils = Arc::new(Utils::new());
+    let db_path = env::var("DB_PATH").unwrap();
+    let utils = Arc::new(Utils::new(db_path));
 
     let handler = dptree::entry()
         .branch(Update::filter_message().endpoint(message_handler))
