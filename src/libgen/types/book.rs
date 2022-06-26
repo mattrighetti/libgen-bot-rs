@@ -37,7 +37,7 @@ impl Book {
     }
 
     pub fn md5_url(&self) -> String {
-        format!("http://gen.lib.rus.ec/book/index.php?md5={}", self.md5)
+        format!("http://libgen.is/get.php?md5={}", self.md5)
     }
 }
 
