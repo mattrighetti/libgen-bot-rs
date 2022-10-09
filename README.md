@@ -1,6 +1,6 @@
 # Libgen Bot
 
-[Libgen bot](https://t.me/libgenis_bot) is a Telgram bot to interface with libgen
+[Libgen bot](https://t.me/libgen1bot) is a Telgram bot to interface with libgen
 
 ## Features
 You can message anything to the bot and it will search by using the default search options in libgen, if you need something more granular you can use these commands:
