@@ -24,9 +24,11 @@ jobs:
           use-cross: true
           command: build
           args: --target arm-unknown-linux-gnueabihf --release
-      - name: Test
+      - name: File
         run: file target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs
+      - name: Rename
+        run: mv target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs-arm
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs
+          files: target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs-arm

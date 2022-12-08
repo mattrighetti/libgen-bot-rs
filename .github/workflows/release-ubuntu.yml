@@ -1,9 +1,8 @@
-name: Raspberry Pi bin compile
+name: Ubuntu bin
 
 on:
   push:
-    tags:
-      - '*.*'
+    branch: 'main'
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,9 +23,11 @@ jobs:
           use-cross: true
           command: build
           args: --target x86_64-unknown-linux-gnu --release
-      - name: Test
+      - name: File
         run: file target/x86_64-unknown-linux-gnu/release/libgen-bot-rs
+      - name: Rename
+        run: mv target/x86_64-unknown-linux-gnu/release/libgen-bot-rs target/x86_64-unknown-linux-gnu/release/libgen-bot-rs-x86_64
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: target/x86_64-unknown-linux-gnu/release/libgen-bot-rs
+          files: target/x86_64-unknown-linux-gnu/release/libgen-bot-rs-x86_64
