@@ -3,7 +3,6 @@ use rusqlite::{Connection, Result};
 pub fn get_db(path: Option<&str>) -> Result<Connection> {
     let db = match path {
         Some(path) => {
-            let path = path;
             Connection::open(&path)?
         }
         None => {
@@ -20,7 +19,7 @@ fn run_migrations(conn: &Connection) -> Result<()> {
             user_id  INTEGER NOT NULL,
             msg_id   INTEGER NOT NULL,
             type     TEXT NOT NULL,
-            utime    INTEGER NOT NULL DEFAULT (strftime('%s', 'now')) 
+            utime    INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         );", [],
     )?;
 

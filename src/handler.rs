@@ -15,10 +15,8 @@ use teloxide::{
     prelude2::*,
     Bot,
     adaptors::AutoSend,
-    types::{
-        Message,
-    },
-    utils::command::BotCommand 
+    types::Message,
+    utils::command::BotCommand
 };
 
 #[derive(BotCommand)]
@@ -35,7 +33,7 @@ impl From<Command> for Search {
             Command::Author(author) => Search::Author(author),
             Command::Title(title) => Search::Title(title),
             Command::ISBN(isbn) => Search::ISBN(isbn)
-        } 
+        }
     }
 }
 
@@ -43,30 +41,37 @@ pub async fn callback_handler(
     q: CallbackQuery,
     bot: AutoSend<Bot>,
     utils: Arc<Utils>
-) 
-    -> Result<(), Box<dyn Error + Send + Sync>> 
+)
+    -> Result<(), Box<dyn Error + Send + Sync>>
 {
-    if let Some(id) = q.data {
-        let ids = vec![id.parse().unwrap()];
-        let books = get_ids(&utils.client, ids).await;
-        let book = books.first().unwrap();
-        let url_keyboard = make_url_keyboard(&book.md5_url());
-        
-        match q.message {
-            Some(Message { id, chat, .. }) => {
-                utils.register(chat.id, id, "SELECTION")?;
-                bot.edit_message_text(chat.id, id, book.pretty())
-                    .parse_mode(ParseMode::Html)
-                    .reply_markup(url_keyboard)
-                    .await?;
-            }
-            None => {
-                if let Some(id) = q.inline_message_id {
-                    bot.edit_message_text_inline(id, "".to_string()).await?;
-                }
-            }
+    let (user_id, chat_id) = match q.message {
+        Some(Message { id, chat, .. }) => (id, chat.id),
+        None => return Ok(())
+    };
+
+    let ids = match q.data {
+        Some(id) => vec![id.parse().unwrap()],
+        None => {
+            bot.edit_message_text(chat_id, user_id, "💥").await?;
+            return Ok(())
         }
-    }
+    };
+
+    let book = match get_ids(&utils.client, ids).await {
+        Ok(mut books) => books.remove(0),
+        Err(_) => {
+            bot.edit_message_text(chat_id, user_id, "💥").await?;
+            return Ok(())
+        }
+    };
+
+    utils.register(chat_id, user_id, "SELECTION")?;
+
+    let url_keyboard = make_url_keyboard(&book.md5_url());
+    bot.edit_message_text(chat_id, user_id, book.pretty())
+        .parse_mode(ParseMode::Html)
+        .reply_markup(url_keyboard)
+        .await?;
 
     Ok(())
 }
@@ -76,37 +81,43 @@ pub async fn message_handler(
     m: Message,
     utils: Arc<Utils>
 )
-    -> Result<(), Box<dyn Error + Send + Sync>> 
+    -> Result<(), Box<dyn Error + Send + Sync>>
 {
     let chat_id = m.chat_id();
 
     let text = match m.text() {
         Some(text) => text.trim(),
-        None => { 
-            return Ok(()); 
-        }
+        None => return Ok(())
     };
 
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
     utils.register(chat_id, msg.id, "INVOKE")?;
 
     let command =  Command::parse(text, "libgenis_bot");
-    let mut q = Search::Default(text.into());
+    let mut query = Search::Default(text.into());
     if let Ok(command) = command {
-        q = command.into();
+        query = command.into();
     }
 
-    let books = get_books(&utils.client, q, 5).await;
-    if books.len() > 0 {
+    let books = match get_books(&utils.client, query, 5).await {
+        Ok(books) => books,
+        Err(_) => {
+            utils.register(chat_id, msg.id, "BAD")?;
+            bot.edit_message_text(chat_id, msg.id, "Mmm, something went bad while searching for books. Try again later...").await?;
+            return Ok(());
+        }
+    };
+
+    if books.is_empty() {
+        utils.register(chat_id, msg.id, "UNAVAILABLE")?;
+        bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
+    } else {
         let keyboard = make_keyboard(&books);
         let text = make_message(&books);
         bot.edit_message_text(chat_id, msg.id, text)
             .parse_mode(ParseMode::Html)
             .reply_markup(keyboard)
             .await?;
-    } else {
-        utils.register(chat_id, msg.id, "UNAVAILABLE")?;
-        bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
     }
 
     Ok(())
