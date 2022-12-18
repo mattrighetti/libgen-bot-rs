@@ -52,13 +52,16 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<
     let ids = doc.find(Attr("valign", "top"))
         .skip(1)
         .take(limit)
-        .map(|n| n.descendants().take(1).next())
-        .filter_map(|n| match n {
-            Some(n) => Some(n),
-            None => None
+        .filter_map(|n| {
+            let first_descendant = n.descendants().take(1).next();
+            if let Some(fd) = first_descendant {
+                if let Ok(val) = fd.text().parse::<u32>() {
+                    return Some(val)
+                }
+            }
+
+            None
         })
-        .map(|n| n.text().parse::<u32>())
-        .filter_map(|n| n.ok())
         .collect();
 
     Ok(ids)
