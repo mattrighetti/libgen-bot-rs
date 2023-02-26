@@ -1,0 +1,17 @@
+# TODO: Test standalone aarch64
+# Build
+FROM --platform=arm64 rust:1.67.1 as builder
+RUN apt-get update && apt-get install -y musl-tools
+RUN rustup target add aarch64-unknown-linux-musl
+
+WORKDIR /usr/src/libgen-bot-rs
+COPY . .
+ENV OPENSSL_STATIC=1
+RUN cargo install --target aarch64-unknown-linux-musl --path .
+
+# Bundle
+FROM --platform=arm64 alpine
+WORKDIR /app
+COPY --from=builder /usr/local/cargo/bin/libgen-bot-rs .
+COPY log.yml .
+ENTRYPOINT [ "./libgen-bot-rs" ]
