@@ -1,3 +1,6 @@
 /target
 .env
 debug.log
+db.sqlite
+
+.vscode/
