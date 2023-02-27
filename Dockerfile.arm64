@@ -1,16 +1,20 @@
-# TODO: Test standalone aarch64
 # Build
-FROM --platform=arm64 rust:1.67.1 as builder
-RUN apt-get update && apt-get install -y musl-tools
+FROM --platform=arm64 rust:1.67.1-alpine as builder
+RUN apk add musl-dev pkgconfig openssl-dev
 RUN rustup target add aarch64-unknown-linux-musl
 
 WORKDIR /usr/src/libgen-bot-rs
-COPY . .
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
+    && cargo fetch --target aarch64-unknown-linux-musl
+COPY src/ ./src/
+ENV OPENSSL_NO_VENDOR=1
 ENV OPENSSL_STATIC=1
 RUN cargo install --target aarch64-unknown-linux-musl --path .
 
 # Bundle
 FROM --platform=arm64 alpine
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY --from=builder /usr/local/cargo/bin/libgen-bot-rs .
 COPY log.yml .

@@ -740,6 +740,7 @@ dependencies = [
  "teloxide",
  "tokio",
  "tokio-stream",
+ "tokio-util",
 ]
 
 [[package]]
