@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM rust:alpine as builder
 ARG TARGETARCH
 RUN apk add clang llvm musl-dev
 COPY platform.sh .
-RUN ./platform.sh
+RUN sh platform.sh
 RUN rustup target add $(cat /.platform)
 
 WORKDIR /usr/src/libgen-bot-rs
