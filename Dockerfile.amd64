@@ -1,6 +1,6 @@
 # Build
-FROM --platform=amd64 rust:1.67.1 as builder
-RUN apt-get update && apt-get install -y musl-tools
+FROM --platform=amd64 rust:alpine as builder
+RUN apk add musl-dev
 RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /usr/src/libgen-bot-rs
@@ -8,7 +8,6 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
     && cargo fetch --target x86_64-unknown-linux-musl
 COPY src/ ./src/
-ENV OPENSSL_STATIC=1
 RUN cargo install --target x86_64-unknown-linux-musl --path .
 
 # Bundle
