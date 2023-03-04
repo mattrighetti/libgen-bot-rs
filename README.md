@@ -1,6 +1,6 @@
 # Libgen Bot
 
-[Libgen bot](https://t.me/libgen1bot) is a Telgram bot to interface with libgen
+Libgen bot is a Telgram bot to interface with libgen
 
 ## Features
 
@@ -14,17 +14,28 @@ commands:
 | `/author <author>` | Search by author |
 | `/isbn <ISBN>`     | Search by isbn   |
 
+## Configuration
+
+The bot can be configured using the following environment variables:
+
+- **TELOXIDE_TOKEN**: The telegram bot token. This is a required variable.
+- **DB_PATH**: Optional varable with the path where the bot will store simple
+  analytics. It defaults to `db.sqlite`
+- **LOG_PATH**: Optional variable with the path to the `log4rs` config file. If
+  not provided the default bundled configuration from `log.yml` will be used.
+
 ## Running using docker
 
-The bot requires three environment variables to run:
+Docker images are provided on the GitHub Container Registry for amd64 and arm64
+architectures.
 
-- **TELOXIDE_TOKEN**: Telegram bot token
-- **DB_PATH**: Path to the analytics sqlite database file. Use `db.sqlite` for
-  default behavior
-- **LOG_PATH**: Path to the log4rs log format file. Use `log.yml` for default
-  behavior
+For custom `log4rs` logging settings you can mount a volume with config file
+pointing to `/app/$LOG_PATH`.
 
-### docker-compose
+The statistics database can be mounted to a volume to persist the data and allow
+inspection from host. It can be found in `/app/$DB_PATH`.
+
+### Example docker-compose
 
 ```yaml
 version: '3'
@@ -35,9 +46,7 @@ services:
     container_name: libgen-bot
     environment:
       - TELOXIDE_TOKEN=<token>
-      - DB_PATH=db.sqlite
     volumes:
-      # It's possible to mount the db file to a volume to persist the data and allow inspection from host
       - /path/to/my/db.sqlite:/app/db.sqlite
 ```
 

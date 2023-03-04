@@ -7,6 +7,8 @@ WORKDIR /usr/src/libgen-bot-rs
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
     && cargo fetch --target aarch64-unknown-linux-musl
+
+COPY log.yml .
 COPY src/ ./src/
 RUN cargo install --target aarch64-unknown-linux-musl --path .
 
@@ -14,5 +16,4 @@ RUN cargo install --target aarch64-unknown-linux-musl --path .
 FROM --platform=arm64 alpine
 WORKDIR /app
 COPY --from=builder /usr/local/cargo/bin/libgen-bot-rs .
-COPY log.yml .
 ENTRYPOINT [ "./libgen-bot-rs" ]

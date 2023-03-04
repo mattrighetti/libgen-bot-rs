@@ -11,6 +11,7 @@ COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
     && cargo fetch --target $(cat /.platform)
 
+COPY log.yml .
 COPY src/ ./src/
 ENV CC_aarch64_unknown_linux_musl=clang
 ENV AR_aarch64_unknown_linux_musl=llvm-ar
@@ -22,5 +23,4 @@ FROM --platform=$BUILDPLATFORM alpine
 ARG TARGETARCH
 WORKDIR /app
 COPY --from=builder /usr/local/cargo/bin/libgen-bot-rs .
-COPY log.yml .
 ENTRYPOINT [ "./libgen-bot-rs" ]
