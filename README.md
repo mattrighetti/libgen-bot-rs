@@ -42,7 +42,7 @@ version: '3'
 
 services:
   libgen-bot:
-    image: <TODO>
+    image: ghcr.io/mattrighetti/libgen-bot-rs
     container_name: libgen-bot
     environment:
       - TELOXIDE_TOKEN=<token>
