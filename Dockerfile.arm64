@@ -1,0 +1,19 @@
+# Build
+FROM --platform=arm64 rust:alpine as builder
+RUN apk add musl-dev
+RUN rustup target add aarch64-unknown-linux-musl
+
+WORKDIR /usr/src/libgen-bot-rs
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
+    && cargo fetch --target aarch64-unknown-linux-musl
+
+COPY log.yml .
+COPY src/ ./src/
+RUN cargo install --target aarch64-unknown-linux-musl --path .
+
+# Bundle
+FROM --platform=arm64 alpine
+WORKDIR /app
+COPY --from=builder /usr/local/cargo/bin/libgen-bot-rs .
+ENTRYPOINT [ "./libgen-bot-rs" ]

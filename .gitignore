@@ -1,6 +1,5 @@
-/target
+target/
+.vscode/
 .env
 debug.log
 db.sqlite
-
-.vscode/
