@@ -6,12 +6,19 @@ mod db;
 use std::{sync::Arc, env};
 use libgen::Utils;
 use teloxide::{prelude2::*, dispatching2::UpdateFilterExt};
+use log4rs::config::RawConfig;
 use handler::{message_handler, callback_handler};
+
+const LOG_CONFIG: &str = include_str!("../log.yml");
 
 #[tokio::main]
 async fn main() {
-    let log_path = std::env::var("LOG_PATH").unwrap();
-    log4rs::init_file(log_path, Default::default()).unwrap();
+    if let Ok(log_path) = std::env::var("LOG_PATH") {
+        log4rs::init_file(log_path, Default::default()).unwrap();
+    } else {
+        let raw_config: RawConfig = serde_yaml::from_str(LOG_CONFIG).unwrap();
+        log4rs::init_raw_config(raw_config).unwrap();
+    }
     run().await;
 }
 
@@ -19,7 +26,7 @@ async fn run() {
     log::info!("Starting libgen-bot");
 
     let bot = Bot::from_env().auto_send();
-    let db_path = env::var("DB_PATH").unwrap();
+    let db_path = env::var("DB_PATH").unwrap_or("db.sqlite".into());
     let utils = Arc::new(Utils::new(db_path));
 
     let handler = dptree::entry()
