@@ -2,7 +2,7 @@ name: Docker multiarch release
 
 permissions:
   contents: read
-  packages: read|write
+  packages: write
 
 on:
   push:
