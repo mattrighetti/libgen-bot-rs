@@ -7,12 +7,8 @@ RUN sh platform.sh
 RUN rustup target add $(cat /.platform)
 
 WORKDIR /usr/src/libgen-bot-rs
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
-    && cargo fetch --target $(cat /.platform)
-
-COPY log.yml .
-COPY src/ ./src/
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+COPY . .
 ENV CC_aarch64_unknown_linux_musl=clang
 ENV AR_aarch64_unknown_linux_musl=llvm-ar
 ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld"

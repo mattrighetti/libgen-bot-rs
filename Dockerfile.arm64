@@ -4,12 +4,8 @@ RUN apk add musl-dev
 RUN rustup target add aarch64-unknown-linux-musl
 
 WORKDIR /usr/src/libgen-bot-rs
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src && echo "fn main() {}" > src/main.rs \
-    && cargo fetch --target aarch64-unknown-linux-musl
-
-COPY log.yml .
-COPY src/ ./src/
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+COPY . .
 RUN cargo install --target aarch64-unknown-linux-musl --path .
 
 # Bundle
