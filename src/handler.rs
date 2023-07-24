@@ -9,20 +9,14 @@ use crate::libgen::{
     get_books
 };
 use crate::utils::*;
+use teloxide::{prelude::*, utils::command::BotCommands};
 use teloxide::payloads::EditMessageTextSetters;
 use teloxide::types::ParseMode;
-use teloxide::{
-    prelude2::*,
-    Bot,
-    adaptors::AutoSend,
-    types::Message,
-    utils::command::BotCommand
-};
 
-#[derive(BotCommand)]
-#[command(rename = "lowercase", description = "These commands are supported:")]
+#[derive(BotCommands, Clone)]
+#[command(rename_rule = "lowercase", description = "These commands are supported:")]
 enum Command {
-    ISBN(String),
+    Isbn(String),
     Title(String),
     Author(String)
 }
@@ -32,14 +26,14 @@ impl From<Command> for Search {
         match command {
             Command::Author(author) => Search::Author(author),
             Command::Title(title) => Search::Title(title),
-            Command::ISBN(isbn) => Search::ISBN(isbn)
+            Command::Isbn(isbn) => Search::Isbn(isbn)
         }
     }
 }
 
 pub async fn callback_handler(
     q: CallbackQuery,
-    bot: AutoSend<Bot>,
+    bot: Bot,
     utils: Arc<Utils>
 )
     -> Result<(), Box<dyn Error + Send + Sync>>
@@ -65,7 +59,7 @@ pub async fn callback_handler(
         }
     };
 
-    utils.register(chat_id, user_id, "SELECTION")?;
+    utils.register(chat_id.0, user_id.0, "SELECTION")?;
 
     let url_keyboard = make_url_keyboard(&book.md5_url());
     bot.edit_message_text(chat_id, user_id, book.pretty())
@@ -77,13 +71,13 @@ pub async fn callback_handler(
 }
 
 pub async fn message_handler(
-    bot: AutoSend<Bot>,
+    bot: Bot,
     m: Message,
     utils: Arc<Utils>
 )
     -> Result<(), Box<dyn Error + Send + Sync>>
 {
-    let chat_id = m.chat_id();
+    let chat_id = m.chat.id;
 
     let text = match m.text() {
         Some(text) => text.trim(),
@@ -91,7 +85,7 @@ pub async fn message_handler(
     };
 
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
-    utils.register(chat_id, msg.id, "INVOKE")?;
+    utils.register(chat_id.0, msg.id.0, "INVOKE")?;
 
     let command =  Command::parse(text, "libgenis_bot");
     let mut query = Search::Default(text.into());
@@ -102,14 +96,14 @@ pub async fn message_handler(
     let books = match get_books(&utils.client, query, 5).await {
         Ok(books) => books,
         Err(_) => {
-            utils.register(chat_id, msg.id, "BAD")?;
+            utils.register(chat_id.0, msg.id.0, "BAD")?;
             bot.edit_message_text(chat_id, msg.id, "Mmm, something went bad while searching for books. Try again later...").await?;
             return Ok(());
         }
     };
 
     if books.is_empty() {
-        utils.register(chat_id, msg.id, "UNAVAILABLE")?;
+        utils.register(chat_id.0, msg.id.0, "UNAVAILABLE")?;
         bot.edit_message_text(chat_id, msg.id, "Sorry, I don't have any result for that...").await?;
     } else {
         let keyboard = make_keyboard(&books);

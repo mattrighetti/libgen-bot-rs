@@ -1,12 +1,12 @@
 [package]
 name = "libgen-bot-rs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-teloxide = { version = "0.7", features = ["macros", "auto-send", "ctrlc_handler", "rustls", "dispatching2"], default-features = false }
+teloxide = { version = "0.12.2", features = ["macros"]}
 log4rs = { version = "1.0", features = ["file_appender", "pattern_encoder"] }
 log = "0.4"
 pretty_env_logger = "0.4.0"

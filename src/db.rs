@@ -3,7 +3,7 @@ use rusqlite::{Connection, Result};
 pub fn get_db(path: Option<&str>) -> Result<Connection> {
     let db = match path {
         Some(path) => {
-            Connection::open(&path)?
+            Connection::open(path)?
         }
         None => {
             Connection::open_in_memory()?
@@ -33,6 +33,6 @@ mod test {
     #[test]
     fn test_setup() {
         let db = get_db(None);
-        assert_eq!(db.is_ok(), true);
+        assert!(db.is_ok());
     }
 }

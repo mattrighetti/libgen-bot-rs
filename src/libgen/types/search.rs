@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Search {
-    ISBN(String),
+    Isbn(String),
     Author(String),
     Title(String),
     Default(String)
@@ -12,7 +12,7 @@ impl Search {
             Search::Author(author) => {
                 vec![("req".to_string(), author), ("column".to_string(), "author".to_string())]
             }
-            Search::ISBN(isbn) => {
+            Search::Isbn(isbn) => {
                 vec![("req".to_string(), isbn), ("column".to_string(), "identifier".to_string())]
             }
             Search::Title(title) => {
