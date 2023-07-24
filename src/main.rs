@@ -3,9 +3,9 @@ mod handler;
 mod utils;
 mod db;
 
+use teloxide::prelude::*;
 use std::{sync::Arc, env};
 use libgen::Utils;
-use teloxide::{prelude2::*, dispatching2::UpdateFilterExt};
 use log4rs::config::RawConfig;
 use handler::{message_handler, callback_handler};
 
@@ -25,7 +25,7 @@ async fn main() {
 async fn run() {
     log::info!("Starting libgen-bot");
 
-    let bot = Bot::from_env().auto_send();
+    let bot = Bot::from_env();
     let db_path = env::var("DB_PATH").unwrap_or("db.sqlite".into());
     let utils = Arc::new(Utils::new(db_path));
 
@@ -35,8 +35,8 @@ async fn run() {
 
     Dispatcher::builder(bot, handler)
         .dependencies(dptree::deps![utils])
+        .enable_ctrlc_handler()
         .build()
-        .setup_ctrlc_handler()
         .dispatch()
         .await;
 

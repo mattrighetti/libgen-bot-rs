@@ -3,7 +3,7 @@ use reqwest::Url;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 use crate::libgen::types::Book;
 
-pub fn make_message(books: &Vec<Book>) -> String {
+pub fn make_message(books: &[Book]) -> String {
     let msg: String = books
         .iter()
         .enumerate()

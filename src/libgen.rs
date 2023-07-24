@@ -68,7 +68,7 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<
 }
 
 pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Result<Vec<Book>> {
-    assert!(ids.len() > 0);
+    assert!(!ids.is_empty());
     let ids = ids.iter()
         .map(|z| z.to_string())
         .collect::<Vec<String>>()
@@ -92,7 +92,7 @@ pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Result<Vec<Book>> {
 
 pub async fn get_books(client: &Client, query: Search, limit: usize) -> Result<Vec<Book>> {
     let ids = search(client, query, limit).await?;
-    if ids.len() > 0 {
+    if !ids.is_empty() {
        return get_ids(client, ids).await
     }
 
@@ -156,7 +156,7 @@ mod test {
     #[tokio::test]
     async fn test_search_isbn() {
         let client = reqwest::Client::new();
-        let query = Search::ISBN("978-0132350884".into());
+        let query = Search::Isbn("978-0132350884".into());
 
         let ids = search(&client, query, 5).await.unwrap();
         let expected: Vec<u32> = vec![207243, 1489412, 1525091, 2228027, 2324753];
@@ -167,7 +167,7 @@ mod test {
     #[tokio::test]
     async fn test_search_empty_isbn() {
         let client = reqwest::Client::new();
-        let query = Search::ISBN("1823499234".into());
+        let query = Search::Isbn("1823499234".into());
 
         let ids = search(&client, query, 5).await.unwrap();
         let expected: Vec<u32> = vec![];
