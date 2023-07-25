@@ -20,7 +20,6 @@ jobs:
           override: true
       - uses: actions-rs/cargo@v1
         with:
-          use-cross: true
           command: build
           args: --target x86_64-unknown-linux-gnu --release
       - name: File
