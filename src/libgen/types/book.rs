@@ -1,5 +1,5 @@
-use std::fmt::{Display, self};
 use serde::Deserialize;
+use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub struct Book {
@@ -17,9 +17,7 @@ impl Book {
             "<b>{}</b>\n\n\
             👤 {}\n\
             Format: {}\n",
-            self.title,
-            self.author,
-            self.extension
+            self.title, self.author, self.extension
         )
     }
 
@@ -28,11 +26,7 @@ impl Book {
             "{}. <b>{}</b>\n\
             👤 {}\n\
             Year: {}, Type: {}\n",
-            index,
-            self.title,
-            self.author,
-            self.year,
-            self.extension
+            index, self.title, self.author, self.year, self.extension
         )
     }
 
@@ -46,3 +40,4 @@ impl Display for Book {
         write!(f, "Book({}, {}, {})", self.title, self.author, self.md5)
     }
 }
+

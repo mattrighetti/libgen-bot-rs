@@ -4,7 +4,7 @@ use std::error::Error;
 use std::sync::Mutex;
 
 use reqwest::Client;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use select::document::Document;
 use select::predicate::Attr;
 
@@ -34,14 +34,18 @@ impl Utils {
 
     pub fn register(&self, chat_id: i64, message_id: i32, atype: &str) -> rusqlite::Result<()> {
         let lock = self.db.lock().unwrap();
-        lock.execute("INSERT INTO analytics (user_id, msg_id, type) VALUES (?,?,?)", params![chat_id, message_id, atype])?;
+        lock.execute(
+            "INSERT INTO analytics (user_id, msg_id, type) VALUES (?,?,?)",
+            params![chat_id, message_id, atype],
+        )?;
 
         Ok(())
     }
 }
 
 pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<u32>> {
-    let res = client.get(LIBGEN_URL)
+    let res = client
+        .get(LIBGEN_URL)
         .query(&query.search_params())
         .send()
         .await?;
@@ -49,14 +53,15 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<
     let html = res.text().await?;
     let doc = Document::from(html.as_str());
 
-    let ids = doc.find(Attr("valign", "top"))
+    let ids = doc
+        .find(Attr("valign", "top"))
         .skip(1)
         .take(limit)
         .filter_map(|n| {
             let first_descendant = n.descendants().take(1).next();
             if let Some(fd) = first_descendant {
                 if let Ok(val) = fd.text().parse::<u32>() {
-                    return Some(val)
+                    return Some(val);
                 }
             }
 
@@ -69,21 +74,18 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<
 
 pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Result<Vec<Book>> {
     assert!(!ids.is_empty());
-    let ids = ids.iter()
+    let ids = ids
+        .iter()
         .map(|z| z.to_string())
         .collect::<Vec<String>>()
         .join(",");
 
     let params: Vec<(String, String)> = vec![
         ("fields".into(), "id,title,author,year,extension,md5".into()),
-        ("ids".into(), ids)
+        ("ids".into(), ids),
     ];
 
-    let res = client
-        .get(LIBGEN_API_URL)
-        .query(&params)
-        .send()
-        .await?;
+    let res = client.get(LIBGEN_API_URL).query(&params).send().await?;
 
     let books = res.json::<Vec<Book>>().await?;
 
@@ -93,7 +95,7 @@ pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Result<Vec<Book>> {
 pub async fn get_books(client: &Client, query: Search, limit: usize) -> Result<Vec<Book>> {
     let ids = search(client, query, limit).await?;
     if !ids.is_empty() {
-       return get_ids(client, ids).await
+        return get_ids(client, ids).await;
     }
 
     Ok(vec![])
@@ -178,7 +180,9 @@ mod test {
     #[tokio::test]
     async fn test_get_ids() {
         let client = reqwest::Client::new();
-        let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775]).await.unwrap();
+        let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775])
+            .await
+            .unwrap();
 
         assert_eq!(result.len(), 5);
     }
@@ -186,7 +190,14 @@ mod test {
     #[tokio::test]
     async fn test_get_ids_max() {
         let client = reqwest::Client::new();
-        let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775, 349771, 349771, 349771]).await.unwrap();
+        let result = get_ids(
+            &client,
+            vec![
+                349771, 1486260, 1527378, 1729710, 1980775, 349771, 349771, 349771,
+            ],
+        )
+        .await
+        .unwrap();
 
         assert_eq!(result.len(), 5);
     }

@@ -1,13 +1,13 @@
-mod libgen;
-mod handler;
-mod utils;
 mod db;
+mod handler;
+mod libgen;
+mod utils;
 
-use teloxide::prelude::*;
-use std::{sync::Arc, env};
+use handler::{callback_handler, message_handler};
 use libgen::Utils;
 use log4rs::config::RawConfig;
-use handler::{message_handler, callback_handler};
+use std::{env, sync::Arc};
+use teloxide::prelude::*;
 
 const LOG_CONFIG: &str = include_str!("../log.yml");
 
@@ -42,3 +42,4 @@ async fn run() {
 
     log::info!("Closing bot... Goodbye!");
 }
+
