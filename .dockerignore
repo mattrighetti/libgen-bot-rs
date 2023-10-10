@@ -1,4 +1,7 @@
 target/
+.cargo
+.git
+.github
 .vscode
 Dockerfile*
 README.md

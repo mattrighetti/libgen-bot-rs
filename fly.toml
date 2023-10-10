@@ -1,0 +1,30 @@
+# fly.toml app configuration file generated for libgen-bot-rs on 2023-10-10T21:40:22+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "libgen-bot-rs"
+primary_region = "otp"
+
+[build]
+  dockerfile = "Dockerfile.amd64"
+  ignorefile = ".dockerignore"
+
+[[files]]
+  guest_path = "/app/log.yml"
+  local_path = "log.yml"
+
+[[env]]
+  LOG_PATH="/app/log.yml"
+  DB_PATH="/data/libgenis-bot.sqlite"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+  read_only = false
+
+[http_service]
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
