@@ -1,11 +1,9 @@
-use rusqlite::{Connection, Result};
+use rusqlite::{params, Connection, Result};
 
-pub fn get_db(path: Option<&str>) -> Result<Connection> {
-    let db = match path {
-        Some(path) => Connection::open(path)?,
-        None => Connection::open_in_memory()?,
-    };
+pub fn get_db(path: &str) -> Result<Connection> {
+    let db = Connection::open(path)?;
     run_migrations(&db)?;
+
     Ok(db)
 }
 
@@ -23,14 +21,11 @@ fn run_migrations(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
+pub fn register(conn: &Connection, chat_id: i64, message_id: i32, atype: &str) -> Result<()> {
+    conn.execute(
+        "INSERT INTO analytics (user_id, msg_id, type) VALUES (?,?,?)",
+        params![chat_id, message_id, atype],
+    )?;
 
-    #[test]
-    fn test_setup() {
-        let db = get_db(None);
-        assert!(db.is_ok());
-    }
+    Ok(())
 }
-

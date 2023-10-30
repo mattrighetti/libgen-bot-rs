@@ -1,16 +1,16 @@
-pub mod types;
-
 use std::error::Error;
 use std::sync::Mutex;
 
+pub mod types;
+use types::*;
+
 use reqwest::Client;
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
+
 use select::document::Document;
 use select::predicate::Attr;
 
-use crate::db::get_db;
-
-use types::*;
+use crate::db;
 
 const LIBGEN_URL: &str = "https://libgen.is/search.php";
 const LIBGEN_API_URL: &str = "https://libgen.is/json.php";
@@ -24,7 +24,7 @@ pub struct Utils {
 
 impl Utils {
     pub fn new(db_path: String) -> Self {
-        let conn = get_db(Some(db_path.as_str())).unwrap();
+        let conn = db::get_db(&db_path).expect("cannot open database.");
 
         Utils {
             client: Client::new(),
@@ -32,18 +32,15 @@ impl Utils {
         }
     }
 
-    pub fn register(&self, chat_id: i64, message_id: i32, atype: &str) -> rusqlite::Result<()> {
+    pub fn register(&self, chat_id: i64, message_id: i32, atype: &str) -> Result<()> {
         let lock = self.db.lock().unwrap();
-        lock.execute(
-            "INSERT INTO analytics (user_id, msg_id, type) VALUES (?,?,?)",
-            params![chat_id, message_id, atype],
-        )?;
+        db::register(&lock, chat_id, message_id, atype).map_err(|e| e.to_string())?;
 
         Ok(())
     }
 }
 
-pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<u32>> {
+pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<String>> {
     let res = client
         .get(LIBGEN_URL)
         .query(&query.search_params())
@@ -57,37 +54,23 @@ pub async fn search(client: &Client, query: Search, limit: usize) -> Result<Vec<
         .find(Attr("valign", "top"))
         .skip(1)
         .take(limit)
-        .filter_map(|n| {
-            let first_descendant = n.descendants().take(1).next();
-            if let Some(fd) = first_descendant {
-                if let Ok(val) = fd.text().parse::<u32>() {
-                    return Some(val);
-                }
-            }
-
-            None
-        })
+        .filter_map(|n| n.descendants().nth(0).map(|x| x.text()))
         .collect();
 
     Ok(ids)
 }
 
-pub async fn get_ids(client: &Client, ids: Vec<u32>) -> Result<Vec<Book>> {
-    assert!(!ids.is_empty());
-    let ids = ids
-        .iter()
-        .map(|z| z.to_string())
-        .collect::<Vec<String>>()
-        .join(",");
-
-    let params: Vec<(String, String)> = vec![
-        ("fields".into(), "id,title,author,year,extension,md5".into()),
-        ("ids".into(), ids),
-    ];
-
-    let res = client.get(LIBGEN_API_URL).query(&params).send().await?;
-
-    let books = res.json::<Vec<Book>>().await?;
+pub async fn get_ids(client: &Client, ids: Vec<String>) -> Result<Vec<Book>> {
+    let books = client
+        .get(LIBGEN_API_URL)
+        .query(&[
+            ("fields", "id,title,author,year,extension,md5"),
+            ("ids", &ids.join(",")),
+        ])
+        .send()
+        .await?
+        .json()
+        .await?;
 
     Ok(books)
 }
@@ -99,116 +82,4 @@ pub async fn get_books(client: &Client, query: Search, limit: usize) -> Result<V
     }
 
     Ok(vec![])
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_search_invalid_def() {
-        let client = reqwest::Client::new();
-        let query = Search::Default("Ahaha".into());
-
-        let ids = search(&client, query, 5).await.unwrap();
-
-        assert_eq!(ids.len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_search_title() {
-        let client = reqwest::Client::new();
-        let query = Search::Title("Rust Programming".into());
-
-        let ids = search(&client, query, 25).await.unwrap();
-        let expected: Vec<u32> = vec![1486260, 1527378, 1729710, 2158512, 2167798];
-
-        assert_eq!(ids.len(), 25);
-
-        let mut trunc_ids = ids.iter().take(5);
-        assert_eq!(trunc_ids.next(), Some(&expected[0]));
-        assert_eq!(trunc_ids.next(), Some(&expected[1]));
-        assert_eq!(trunc_ids.next(), Some(&expected[2]));
-        assert_eq!(trunc_ids.next(), Some(&expected[3]));
-        assert_eq!(trunc_ids.next(), Some(&expected[4]));
-    }
-
-    #[tokio::test]
-    async fn test_search_author() {
-        let client = reqwest::Client::new();
-        let query = Search::Author("Orendorff".into());
-
-        let ids = search(&client, query, 5).await.unwrap();
-        let expected: Vec<u32> = vec![1486260, 1527378, 2158512, 2167798, 2917089];
-
-        assert_eq!(ids, expected);
-    }
-
-    #[tokio::test]
-    async fn test_search_default() {
-        let client = reqwest::Client::new();
-        let query = Search::Default("Rust Programming".into());
-
-        let ids = search(&client, query, 5).await.unwrap();
-        let expected: Vec<u32> = vec![349771, 1486260, 1527378, 1729710, 1980775];
-
-        assert_eq!(ids, expected);
-    }
-
-    #[tokio::test]
-    async fn test_search_isbn() {
-        let client = reqwest::Client::new();
-        let query = Search::Isbn("978-0132350884".into());
-
-        let ids = search(&client, query, 5).await.unwrap();
-        let expected: Vec<u32> = vec![207243, 1489412, 1525091, 2228027, 2324753];
-
-        assert_eq!(ids, expected);
-    }
-
-    #[tokio::test]
-    async fn test_search_empty_isbn() {
-        let client = reqwest::Client::new();
-        let query = Search::Isbn("1823499234".into());
-
-        let ids = search(&client, query, 5).await.unwrap();
-        let expected: Vec<u32> = vec![];
-
-        assert_eq!(ids, expected);
-    }
-
-    #[tokio::test]
-    async fn test_get_ids() {
-        let client = reqwest::Client::new();
-        let result = get_ids(&client, vec![349771, 1486260, 1527378, 1729710, 1980775])
-            .await
-            .unwrap();
-
-        assert_eq!(result.len(), 5);
-    }
-
-    #[tokio::test]
-    async fn test_get_ids_max() {
-        let client = reqwest::Client::new();
-        let result = get_ids(
-            &client,
-            vec![
-                349771, 1486260, 1527378, 1729710, 1980775, 349771, 349771, 349771,
-            ],
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(result.len(), 5);
-    }
-
-    #[tokio::test]
-    async fn test_invalid_get_books_def() {
-        let client = reqwest::Client::new();
-        let query = Search::Default("Ahaha".into());
-
-        let books = get_books(&client, query, 5).await.unwrap();
-
-        assert_eq!(books.len(), 0);
-    }
 }

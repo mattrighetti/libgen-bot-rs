@@ -42,4 +42,3 @@ async fn run() {
 
     log::info!("Closing bot... Goodbye!");
 }
-
