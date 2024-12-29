@@ -4,20 +4,18 @@ use std::ops::Index;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 pub fn make_message(books: &[Book]) -> String {
-    let msg: String = books
+    books
         .iter()
         .enumerate()
         .map(|(i, b)| b.pretty_with_index(i + 1) + "\n")
-        .collect();
-
-    msg
+        .collect()
 }
 
 pub fn make_url_keyboard(url: &str) -> InlineKeyboardMarkup {
     let url = Url::parse(url).unwrap();
     let button = InlineKeyboardButton::url("Download".to_string(), url);
-
     let keyboard = vec![vec![button]];
+
     InlineKeyboardMarkup::new(keyboard)
 }
 

@@ -1,11 +1,10 @@
 use std::{error::Error, sync::Arc};
-
 use teloxide::payloads::EditMessageTextSetters;
-use teloxide::types::ParseMode;
+use teloxide::types::{MaybeInaccessibleMessage, ParseMode};
 use teloxide::{prelude::*, utils::command::BotCommands};
 
-use crate::libgen::{get_books, get_ids, types::*, Utils};
-use crate::utils::*;
+use crate::libgen::{types::*, Utils};
+use crate::{db, utils::*};
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -33,31 +32,32 @@ pub async fn callback_handler(
     bot: Bot,
     utils: Arc<Utils>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let (user_id, chat_id) = match q.message {
-        Some(Message { id, chat, .. }) => (id, chat.id),
+    let (message_id, chat_id) = match q.message {
+        Some(MaybeInaccessibleMessage::Inaccessible(ref msg)) => (msg.message_id, msg.chat.id),
+        Some(MaybeInaccessibleMessage::Regular(ref msg)) => (msg.id, msg.chat.id),
         None => return Ok(()),
     };
 
     let ids = match q.data {
         Some(id) => vec![id.parse().unwrap()],
         None => {
-            bot.edit_message_text(chat_id, user_id, "💥").await?;
+            bot.edit_message_text(chat_id, message_id, "💥").await?;
             return Ok(());
         }
     };
 
-    let book = match get_ids(&utils.client, ids).await {
+    let book = match utils.client.get_ids(ids).await {
         Ok(mut books) => books.remove(0),
         Err(_) => {
-            bot.edit_message_text(chat_id, user_id, "💥").await?;
+            bot.edit_message_text(chat_id, message_id, "💥").await?;
             return Ok(());
         }
     };
 
-    utils.register(chat_id.0, user_id.0, "SELECTION")?;
+    db::register(&utils.db, chat_id.0, message_id.0, "SELECTION").await?;
 
     let url_keyboard = make_url_keyboard(&book.md5_url());
-    bot.edit_message_text(chat_id, user_id, book.pretty())
+    bot.edit_message_text(chat_id, message_id, book.pretty())
         .parse_mode(ParseMode::Html)
         .reply_markup(url_keyboard)
         .await?;
@@ -67,18 +67,18 @@ pub async fn callback_handler(
 
 pub async fn message_handler(
     bot: Bot,
-    m: Message,
+    msg: Message,
     utils: Arc<Utils>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let chat_id = m.chat.id;
+    let chat_id = msg.chat.id;
 
-    let text = match m.text() {
+    let text = match msg.text() {
         Some(text) => text.trim(),
         None => return Ok(()),
     };
 
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
-    utils.register(chat_id.0, msg.id.0, "INVOKE")?;
+    db::register(&utils.db, chat_id.0, msg.id.0, "INVOKE").await?;
 
     let command = Command::parse(text, "libgenis_bot");
     let mut query = Search::Default(text.into());
@@ -86,10 +86,10 @@ pub async fn message_handler(
         query = command.into();
     }
 
-    let books = match get_books(&utils.client, query, 5).await {
+    let books = match utils.client.get_books(query, 5).await {
         Ok(books) => books,
         Err(_) => {
-            utils.register(chat_id.0, msg.id.0, "BAD")?;
+            db::register(&utils.db, chat_id.0, msg.id.0, "BAD").await?;
             bot.edit_message_text(
                 chat_id,
                 msg.id,
@@ -101,7 +101,7 @@ pub async fn message_handler(
     };
 
     if books.is_empty() {
-        utils.register(chat_id.0, msg.id.0, "UNAVAILABLE")?;
+        db::register(&utils.db, chat_id.0, msg.id.0, "UNAVAILABLE").await?;
         bot.edit_message_text(
             chat_id,
             msg.id,

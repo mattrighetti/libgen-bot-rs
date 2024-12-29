@@ -6,16 +6,20 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-teloxide = { version = "0.12.2", features = ["macros", "ctrlc_handler"], default-features = false }
-log4rs = { version = "1.0", features = ["file_appender", "pattern_encoder"] }
+teloxide = { version = "0.13", features = ["macros"] }
 log = "0.4"
-tokio = { version = "1.29.1", features = ["rt-multi-thread", "macros"] }
+pretty_env_logger = "0.5"
+tokio = { version =  "1", features = ["rt-multi-thread", "macros"] }
 reqwest = { version = "*", default-features = false, features = [
   "json",
   "rustls-tls",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
 select = "0.5.0"
 chrono = "0.4.19"
-rusqlite = { version = "0.27.0", features = ["bundled"] }
+sqlx = { version = "0.7", features = [
+    "macros",
+    "postgres",
+    "migrate",
+    "runtime-tokio"
+] }
