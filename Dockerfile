@@ -1,4 +1,4 @@
-FROM rust:1.78 as builder
+FROM rust:1.82 as builder
 
 WORKDIR /usr/src/app
 COPY . .
@@ -10,7 +10,7 @@ RUN cargo build --target=x86_64-unknown-linux-musl --release
 RUN mv ./target/x86_64-unknown-linux-musl/release/libgen-bot-rs ./libgen-bot-rs
 
 # Runtime image
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 RUN apt update; apt install -y ca-certificates
 WORKDIR /app
 # Get compiled binaries from builder's cargo install directory
