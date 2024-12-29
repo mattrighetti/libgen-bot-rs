@@ -1,10 +1,9 @@
 use std::error::Error;
-use std::sync::Mutex;
 pub mod types;
+use sqlx::PgPool;
 use types::*;
 
 use reqwest::Client;
-use rusqlite::Connection;
 use select::document::Document;
 use select::predicate::Attr;
 use std::time::Duration;
@@ -16,7 +15,7 @@ const LIBGEN_API_URL: &str = "https://libgen.is/json.php";
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LibgenClient(Client);
 
 impl LibgenClient {
@@ -76,26 +75,17 @@ impl LibgenClient {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Utils {
     pub client: LibgenClient,
-    pub db: Mutex<Connection>,
+    pub db: PgPool,
 }
 
 impl Utils {
-    pub fn new(db_path: String) -> Self {
-        let conn = db::get_db(&db_path).expect("cannot open database.");
+    pub async fn new(db_url: String) -> Self {
+        let client = LibgenClient::new();
+        let db = db::init(&db_url).await;
 
-        Utils {
-            client: LibgenClient::new(),
-            db: Mutex::new(conn),
-        }
-    }
-
-    pub fn register(&self, chat_id: i64, message_id: i32, atype: &str) -> Result<()> {
-        let lock = self.db.lock().unwrap();
-        db::register(&lock, chat_id, message_id, atype).map_err(|e| e.to_string())?;
-
-        Ok(())
+        Utils { client, db }
     }
 }
