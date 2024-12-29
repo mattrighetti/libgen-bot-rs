@@ -2,7 +2,7 @@
 
 set -e
 
-URL="https://github.com/mattrighetti/libgeb-bot-rs/blob/master/CHANGELOG.md"
+URL="https://github.com/mattrighetti/libgen-bot-rs/blob/master/CHANGELOG.md"
 TAG="$(git tag --points-at HEAD)"
 REF="${TAG//./}---$(git show -s --format=%cd --date=short)"
 CHANGELOG_REF="${URL}#${REF}"

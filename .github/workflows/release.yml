@@ -32,7 +32,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ci/create_release ${{ env.BOT_VERSION }}
+          ci/create-release ${{ env.BOT_VERSION }}
 
   binary-release:
     name: Binary Release
