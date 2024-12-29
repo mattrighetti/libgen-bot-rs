@@ -10,28 +10,16 @@ impl Search {
     pub fn search_params(self) -> Vec<(String, String)> {
         let mut q = match self {
             Search::Author(author) => {
-                vec![
-                    ("req".to_string(), author),
-                    ("column".to_string(), "author".to_string()),
-                ]
+                vec![("req".into(), author), ("column".into(), "author".into())]
             }
             Search::Isbn(isbn) => {
-                vec![
-                    ("req".to_string(), isbn),
-                    ("column".to_string(), "identifier".to_string()),
-                ]
+                vec![("req".into(), isbn), ("column".into(), "identifier".into())]
             }
             Search::Title(title) => {
-                vec![
-                    ("req".to_string(), title),
-                    ("column".to_string(), "title".to_string()),
-                ]
+                vec![("req".into(), title), ("column".into(), "title".into())]
             }
             Search::Default(text) => {
-                vec![
-                    ("req".to_string(), text),
-                    ("column".to_string(), "def".to_string()),
-                ]
+                vec![("req".into(), text), ("column".into(), "def".into())]
             }
         };
         q.push(("view".into(), "simple".into()));
@@ -41,4 +29,3 @@ impl Search {
         q
     }
 }
-

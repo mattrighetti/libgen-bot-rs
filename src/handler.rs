@@ -4,7 +4,7 @@ use teloxide::payloads::EditMessageTextSetters;
 use teloxide::types::ParseMode;
 use teloxide::{prelude::*, utils::command::BotCommands};
 
-use crate::libgen::{get_books, get_ids, types::*, Utils};
+use crate::libgen::{types::*, Utils};
 use crate::utils::*;
 
 #[derive(BotCommands, Clone)]
@@ -46,7 +46,7 @@ pub async fn callback_handler(
         }
     };
 
-    let book = match get_ids(&utils.client, ids).await {
+    let book = match utils.client.get_ids(ids).await {
         Ok(mut books) => books.remove(0),
         Err(_) => {
             bot.edit_message_text(chat_id, user_id, "💥").await?;
@@ -86,7 +86,7 @@ pub async fn message_handler(
         query = command.into();
     }
 
-    let books = match get_books(&utils.client, query, 5).await {
+    let books = match utils.client.get_books(query, 5).await {
         Ok(books) => books,
         Err(_) => {
             utils.register(chat_id.0, msg.id.0, "BAD")?;
