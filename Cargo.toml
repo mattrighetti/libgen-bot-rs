@@ -19,3 +19,11 @@ serde_yaml = "0.9"
 select = "0.5.0"
 chrono = "0.4.19"
 rusqlite = { version = "0.27.0", features = ["bundled"] }
+sqlx = { version = "0.7", features = [
+    "runtime-tokio-rustls",
+    "macros",
+    "postgres",
+    "migrate",
+    "uuid",
+    "chrono",
+] }
