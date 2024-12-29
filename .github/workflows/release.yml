@@ -1,0 +1,156 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    outputs:
+      bot_version: ${{ env.BOT_VERSION }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get release version from tag
+        shell: bash
+        if: env.BOT_VERSION == ''
+        run: |
+          echo "BOT_VERSION=$GITHUB_REF_NAME" >> $GITHUB_ENV
+          echo "version is: ${{ env.BOT_VERSION }}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ci/create_release ${{ env.BOT_VERSION }}
+
+  binary-release:
+    name: Binary Release
+    needs: ["create-release"]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO: cargo
+      TARGET_FLAGS: ""
+      TARGET_DIR: ./target
+      RUST_BACKTRACE: 1
+
+    strategy:
+      matrix:
+        include:
+          - build: linux
+            os: ubuntu-latest
+            rust: nightly
+            target: x86_64-unknown-linux-musl
+          - build: stable-aarch64
+            os: ubuntu-latest
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+          - build: stable-arm-gnueabihf
+            os: ubuntu-latest
+            rust: stable
+            target: armv7-unknown-linux-gnueabihf
+          - build: stable-arm-musleabihf
+            os: ubuntu-latest
+            rust: stable
+            target: armv7-unknown-linux-musleabihf
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+
+      - name: Use Cross
+        shell: bash
+        run: |
+          cargo install cross
+          echo "CARGO=cross" >> $GITHUB_ENV
+          echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+          echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Show command used for cargo
+        run: |
+          echo "cargo command is: ${{ env.CARGO }}"
+          echo "target flag is: ${{ env.TARGET_FLAGS }}"
+          echo "target dir is: ${{ env.TARGET_DIR }}"
+
+      - name: Build release binary
+        run: ${{ env.CARGO }} build --verbose --release ${{ env.TARGET_FLAGS }}
+
+      - name: Strip release binary (linux, macos and macos-arm)
+        if: matrix.build == 'linux'
+        run: strip "target/${{ matrix.target }}/release/libgen-bot-rs"
+
+      - name: Strip release binary (arm)
+        if: matrix.build == 'linux-arm'
+        run: |
+          docker run --rm -v \
+            "$PWD/target:/target:Z" \
+            rustembedded/cross:arm-unknown-linux-gnueabihf \
+            arm-linux-gnueabihf-strip \
+            /target/arm-unknown-linux-gnueabihf/release/libgen-bot-rs
+
+      - name: Build archive
+        shell: bash
+        run: |
+          staging="libgen-bot-rs-${{ needs.create-release.outputs.bot_version }}-${{ matrix.target }}"
+          mkdir -p "$staging"
+          cp {README.md,CHANGELOG.md} "$staging/"
+          cp "target/${{ matrix.target }}/release/libgen-bot-rs" "$staging/"
+
+          tar czf "$staging.tar.gz" "$staging"
+          shasum -a 256 "$staging.tar.gz" > "$staging.tar.gz.sha256"
+          echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
+          echo "ASSET_SUM=$staging.tar.gz.sha256" >> $GITHUB_ENV
+
+      - name: Upload release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload ${{ needs.create-release.outputs.bot_version }} ${{ env.ASSET }} ${{ env.ASSET_SUM }}
+
+  release-to-ghcr:
+    name: Docker Image Publish
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
