@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.2 - 2024-12-29
+#### Bug Fixes
+- add openssl dep and update dockerfile image to bookworm - (68ea96d) - Mattia Righetti
+
+- - -
+
 ## 0.3.1 - 2024-12-29
 #### Bug Fixes
 - add base ubuntu packages install script - (2a0c4fa) - Mattia Righetti
