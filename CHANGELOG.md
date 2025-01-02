@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## 0.3.3 - 2025-01-02
+#### Refactoring
+- ad /start and /help command handler - (2323552) - Mattia Righetti
+
+- - -
+
 ## 0.3.2 - 2024-12-29
 #### Bug Fixes
 - add openssl dep and update dockerfile image to bookworm - (68ea96d) - Mattia Righetti
