@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::{error::Error, sync::Arc};
 use teloxide::payloads::EditMessageTextSetters;
 use teloxide::types::{MaybeInaccessibleMessage, ParseMode};
@@ -12,17 +13,26 @@ use crate::{db, utils::*};
     description = "These commands are supported:"
 )]
 enum Command {
+    #[command(description = "check if I'm alive.")]
+    Start,
+    Help,
+    #[command(description = "search by isbn")]
     Isbn(String),
+    #[command(description = "search by title")]
     Title(String),
+    #[command(description = "search by author")]
     Author(String),
 }
 
-impl From<Command> for Search {
-    fn from(command: Command) -> Self {
-        match command {
-            Command::Author(author) => Search::Author(author),
-            Command::Title(title) => Search::Title(title),
-            Command::Isbn(isbn) => Search::Isbn(isbn),
+impl TryFrom<Command> for Search {
+    type Error = String;
+
+    fn try_from(cmd: Command) -> Result<Self, Self::Error> {
+        match cmd {
+            Command::Author(author) => Ok(Search::Author(author)),
+            Command::Title(title) => Ok(Search::Title(title)),
+            Command::Isbn(isbn) => Ok(Search::Isbn(isbn)),
+            _ => Err("cannot convert command to search function".into()),
         }
     }
 }
@@ -77,13 +87,36 @@ pub async fn message_handler(
         None => return Ok(()),
     };
 
+    let command = Command::parse(text, "libgenis_bot");
+
+    match command {
+        Ok(Command::Start) => {
+            db::register(&utils.db, chat_id.0, msg.id.0, "START").await?;
+            bot.send_message(chat_id, r"This bot simply queries library genesis for the books that you ask for.
+                You will still need to go to library Genesis to download the book.
+                If your browser can't open the download link provided to you it's probably because your ISP or local authorities have blocked that url.
+                "
+            ).await?;
+
+            return Ok(());
+        }
+        Ok(Command::Help) => {
+            db::register(&utils.db, chat_id.0, msg.id.0, "HELP").await?;
+            bot.send_message(chat_id, Command::descriptions().to_string())
+                .await?;
+
+            return Ok(());
+        }
+        _ => {}
+    }
+
     let msg = bot.send_message(chat_id, "🤖 Loading...").await?;
     db::register(&utils.db, chat_id.0, msg.id.0, "INVOKE").await?;
 
-    let command = Command::parse(text, "libgenis_bot");
     let mut query = Search::Default(text.into());
     if let Ok(command) = command {
-        query = command.into();
+        // safe to unwrap as /start and /help won't reach this statement
+        query = Search::try_from(command).expect("cannot parse search type from command");
     }
 
     let books = match utils.client.get_books(query, 5).await {
